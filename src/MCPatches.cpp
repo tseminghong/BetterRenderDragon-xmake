@@ -60,6 +60,13 @@ void initMCPatches() {
     ScopedVP(ptr, 22, PAGE_READWRITE);
     ptr[19] = 0xB0;
     ptr[20] = 0x01;
+  } else if (auto ptr = FindSignature(
+                 "41 83 FF 01 75 ? 48 8B 01 48 8B 40 ? FF 15 ? ? ? ? 32 C0");
+             ptr) {
+    // 1.21.60
+    ScopedVP(ptr, 21, PAGE_READWRITE);
+    ptr[19] = 0xB0;
+    ptr[20] = 0x01;
   } else {
     printf("Failed to patch MinecraftGame::_updateLightingModel\n");
   }
@@ -72,6 +79,12 @@ void initMCPatches() {
     ScopedVP(ptr, 25, PAGE_READWRITE);
     ptr[23] = 0xB0;
     ptr[24] = 0x01;
+  } else if (auto ptr = FindSignature("FF 15 ? ? ? ? 32 C0 EB ? B0 01 33 D2");
+             ptr) {
+    // 1.21.60
+    ScopedVP(ptr, 14, PAGE_READWRITE);
+    ptr[6] = 0xB0;
+    ptr[7] = 0x01;
   } else {
     printf("Failed to patch MinecraftGame::startFrame\n");
   }

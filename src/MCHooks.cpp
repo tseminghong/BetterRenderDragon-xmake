@@ -269,13 +269,18 @@ void initMCHooks() {
       "48 8B 03 48 8B CB 48 8B 40 ? FF 15 ? ? ? ? 84 C0 74");
 
   /*Force Enable Deferred Technical Preview*/ {
-    // std::make_unique<BoolOption>
+    // std::make_unique<BoolOption> 38
     TrySigHook(makeBoolOption,
                // 1.21.50
                "48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 55 41 54 41 55 41 56 "
                "41 57 48 8D 6C 24 ? 48 81 EC C0 00 00 00 4D 8B E1 4C 89 4D ? "
                "4C 89 45 ? 48 89 55 ? 48 8B F9 48 89 4D ? 48 89 4D ? 4C 8B 7D "
-               "? 4C 89 7D ? 4C 8B 6D ? 45 33 F6");
+               "? 4C 89 7D ? 4C 8B 6D ? 45 33 F6",
+               // 1.21.60
+               "48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 55 41 54 41 55 41 56 "
+               "41 57 48 8D 6C 24 ? 48 81 EC C0 00 00 00 4C 89 4D ? 4C 89 45 ? "
+               "48 89 55 ? 4C 8B E9 48 89 4D ? 48 89 4D ? 4C 8B 65 ? 4C 89 65 "
+               "? 4C 8B 7D ? 4C 89 7D ? 33 FF");
 
     // Option::getBool
     TrySigHook(Option_getBool,
@@ -334,20 +339,28 @@ void initMCHooks() {
   TrySigHook(ResourcePackManager_constructor,
              // 1.21.50
              "4C 8B DC 53 55 56 57 41 54 41 56 41 57 48 81 EC A0 00 00 00 41 "
-             "0F B6 E9");
+             "0F B6 E9",
+             // 1.21.60
+             "4C 8B DC 49 89 5B ? 49 89 53 ? 49 89 4B ? 55 56 57 41 56");
 
-  TrySigHook(
-      readFile,
-      // 1.21.50
-      "48 89 5C 24 ? 55 56 57 48 8D 6C 24 ? 48 81 EC 50 01 00 00 48 8B 05 ? ? "
-      "? ? 48 33 C4 48 89 45 ? 49 8B F0"
+  // AppPlatform::readAssetFile
+  TrySigHook(readFile,
+             // 1.21.50
+             "48 89 5C 24 ? 55 56 57 48 8D 6C 24 ? 48 81 EC 50 01 00 00 48 8B "
+             "05 ? ? ? ? 48 33 C4 48 89 45 ? 49 8B F0",
+             // 1.21.60
+             "48 89 5C 24 ? 48 89 7C 24 ? 55 48 8D 6C 24 ? 48 81 EC 60 01 00 "
+             "00 48 8B 05 ? ? ? ? 48 33 C4 48 89 45 ? 48 8B FA"
 
   );
 
   if (TrySigHookNoWarning(mce_framebuilder_BgfxFrameBuilder_endFrame,
                           // 1.21.50
                           "48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 "
-                          "57 48 8D AC 24 ? ? ? ? B8 F0 29 00 00")) {
+                          "57 48 8D AC 24 ? ? ? ? B8 F0 29 00 00",
+                          // 1.21.60
+                          "48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 "
+                          "8D AC 24 ? ? ? ? B8 10 29 00 00")) {
     offsetToMaterialsManager = 1008;
   } else {
     printf("Failed to hook mce::framebuilder::BgfxFrameBuilder::endFrame\n");
