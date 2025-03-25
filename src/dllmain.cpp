@@ -9,7 +9,6 @@
 #include <fcntl.h>
 #include <io.h>
 
-/*
 void openConsole() {
   AllocConsole();
   SetConsoleTitleA("Debug Console");
@@ -21,12 +20,12 @@ void openConsole() {
   *stdout = *hf;
   freopen("CONOUT$", "w+t", stdout);
 }
-*/
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call,
                       LPVOID lpReserved) {
   switch (ul_reason_for_call) {
   case DLL_PROCESS_ATTACH: {
+    // openConsole();
     if (FAILED(Windows::Foundation::Initialize(RO_INIT_MULTITHREADED))) {
       printf("Windows::Foundation::Initialize failed\n");
       return TRUE;

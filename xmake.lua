@@ -19,8 +19,9 @@ target("BetterRenderDragon")
     add_defines("UNICODE")
     add_cxflags("/utf-8", "/EHa")
     add_files("src/**.cpp")
+    add_linkdirs("lib")
     add_packages("detours", "gsl", "imgui", "nlohmann_json")
-    add_links("runtimeobject","dxgi")
+    add_links("runtimeobject","dxgi","materialbin","ws2_32","ntdll","userenv")
     if is_mode("release") then
         set_symbols("debug")
     end

@@ -167,6 +167,8 @@ DeclareHook(dragon_materials_MaterialUniformMap_setUniform_mun_vec4, void *,
 
 //=====================================================MaterialBinLoader====================================================
 
+#include "materialbin.h"
+
 typedef bool (*PFN_ResourcePackManager_load)(void *This,
                                              const ResourceLocation &location,
                                              std::string &resourceStream);
@@ -198,64 +200,31 @@ DeclareHook(readFile, std::string *, void *This, std::string *retstr,
           "renderer/materials/" + p.substr(p.find_last_of('/') + 1);
       ResourceLocation location(binPath);
       std::string out;
-      // printf("ResourcePackManager::load path=%s\n", binPath.c_str());
+      printf("ResourcePackManager::load path=%s\n", binPath.c_str());
 
       bool success =
           ResourcePackManager_load(resourcePackManager, location, out);
-      if (success) {
-        retstr->assign(out);
+      if (success && !out.empty()) {
+        bool successful_update = true;
+        struct Buffer outbufdata = {0, 0};
+        if (update_file(out.length(), (const uint8_t *)out.c_str(),
+                        &outbufdata) != 0) {
+          printf("Updating failed!");
+          successful_update = false;
+          free_buf(outbufdata);
+        }
+
+        if (!successful_update) {
+          retstr->assign(out);
+        } else {
+          retstr->assign((const char *)outbufdata.data, outbufdata.len);
+          free_buf(outbufdata);
+        }
       }
-      // printf("ResourcePackManager::load ret=%d\n", success);
+      printf("ResourcePackManager::load ret=%d\n", success);
     }
   }
   return result;
-}
-
-using dragon::materials::MaterialResourceManager;
-
-typedef void (*PFN_mce_framebuilder_BgfxFrameBuilder_discardFrame)(
-    uintptr_t This, bool waitForPreviousFrame);
-typedef void (*PFN_dragon_materials_CompiledMaterialManager_freeShaderBlobs)(
-    uintptr_t This);
-
-PFN_mce_framebuilder_BgfxFrameBuilder_discardFrame discardFrame = nullptr;
-PFN_dragon_materials_CompiledMaterialManager_freeShaderBlobs freeShaderBlobs =
-    nullptr;
-
-int offsetToMaterialsManager = 0x3f0;
-
-/////////////// error  /////////////////////////////////////
-bool discardFrameAndClearShaderCaches(uintptr_t bgfxFrameBuilder) {
-  uintptr_t compiledMaterialManager =
-      *(uintptr_t *)(*(uintptr_t *)(bgfxFrameBuilder + 0x28) + 0x10) + 0x308;
-
-  uintptr_t mExtractor = *(uintptr_t *)(bgfxFrameBuilder + 0x20);
-  MaterialResourceManager *mMaterialsManager =
-      *(MaterialResourceManager **)(mExtractor + offsetToMaterialsManager);
-
-  if (discardFrame && freeShaderBlobs && mMaterialsManager) {
-    discardFrame(bgfxFrameBuilder, true);
-    mMaterialsManager->forceTrim();
-
-    freeShaderBlobs(compiledMaterialManager);
-    freeShaderBlobs(compiledMaterialManager);
-    return true;
-  }
-  return false;
-}
-////////////////////
-
-DeclareHook(mce_framebuilder_BgfxFrameBuilder_endFrame, void, uintptr_t This,
-            uintptr_t frameBuilderContext) {
-  bool clear = false;
-  if (Options::reloadShadersAvailable && Options::reloadShaders) {
-    Options::reloadShaders = false;
-    clear = true;
-  }
-  if (clear && discardFrameAndClearShaderCaches(This)) {
-    return;
-  }
-  original(This, frameBuilderContext);
 }
 
 //==========================================================================================================================
@@ -318,23 +287,6 @@ void initMCHooks() {
                "48 89 5C 24 ? 57 48 83 EC 50 48 8B D9 C7 44 24");
   }
 
-  ////dragon::materials::MaterialUniformMap::setUniform<glm::vec4>
-  ////1.19.40
-  // uintptr_t setUniformPtr = NULL;
-  // uintptr_t call_setUniformPtr = FindSignature(
-  //	"E8 ? ? ? ? "
-  //	"F3 41 0F 10 96 ? ? ? ? "
-  //);
-  // if (call_setUniformPtr) {
-  //	setUniformPtr = call_setUniformPtr + 5 + *(int32_t*)(call_setUniformPtr
-  //+ 1);
-  // }
-  // if (setUniformPtr) {
-  //	Hook(dragon_materials_MaterialUniformMap_setUniform_mun_vec4,
-  //(void*)setUniformPtr); } else { 	printf("Failed to hook
-  // dragon::materials::MaterialUniformMap::setUniform<glm::vec4>\n");
-  // }
-
   // ResourcePackManager::ResourcePackManager
   TrySigHook(ResourcePackManager_constructor,
              // 1.21.50
@@ -347,45 +299,11 @@ void initMCHooks() {
   TrySigHook(readFile,
              // 1.21.50
              "48 89 5C 24 ? 55 56 57 48 8D 6C 24 ? 48 81 EC 50 01 00 00 48 8B "
-             "05 ? ? ? ? 48 33 C4 48 89 45 ? 49 8B F0",
+             "05 ? ? ? ? 48 33 C4 48 89 45 ? 49 8B F0 48 8B FA 48 89 55 ? 0F "
+             "57 C9 F3 0F 7F 4D ? 0F B6 5C 24 ? 80 E3 A1 80 CB 21 BA 28 00 00 "
+             "00 65 48 8B 04 25 ? ? ? ? 48 8B 08 8B 04 0A 39 05 ? ? ? ? 0F 8F "
+             "? ? ? ? 48 8B 05 ? ? ? ? C7 44 24 ? ? ? ? ? 88 5C 24 ? 4C 8D",
              // 1.21.60
              "48 89 5C 24 ? 48 89 7C 24 ? 55 48 8D 6C 24 ? 48 81 EC 60 01 00 "
-             "00 48 8B 05 ? ? ? ? 48 33 C4 48 89 45 ? 48 8B FA"
-
-  );
-
-  if (TrySigHookNoWarning(mce_framebuilder_BgfxFrameBuilder_endFrame,
-                          // 1.21.50
-                          "48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 "
-                          "57 48 8D AC 24 ? ? ? ? B8 F0 29 00 00",
-                          // 1.21.60
-                          "48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 "
-                          "8D AC 24 ? ? ? ? B8 10 29 00 00")) {
-    offsetToMaterialsManager = 1008;
-  } else {
-    printf("Failed to hook mce::framebuilder::BgfxFrameBuilder::endFrame\n");
-  }
-
-  discardFrame =
-      (PFN_mce_framebuilder_BgfxFrameBuilder_discardFrame)FindSignatures(
-          "48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 41 54 41 55 41 56 41 "
-          "57 48 81 EC 90 00 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 84 24 ? ? ? "
-          "? 44 0F B6 EA");
-  if (!discardFrame) {
-    printf("mce::framebuilder::BgfxFrameBuilder::discardFrame not found\n");
-  }
-
-  freeShaderBlobs =
-      (PFN_dragon_materials_CompiledMaterialManager_freeShaderBlobs)
-          FindSignatures(
-              // 1.21.50
-              "48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 41 54 41 55 41 56 "
-              "41 57 48 83 EC 20 4C 8B E9 48 83 C1 40");
-  if (!freeShaderBlobs) {
-    printf("dragon::materials::CompiledMaterialManager::freeShaderBlobs not "
-           "found\n");
-  }
-
-  Options::reloadShadersAvailable =
-      offsetToMaterialsManager >= 0 && discardFrame && freeShaderBlobs;
+             "00 48 8B 05 ? ? ? ? 48 33 C4 48 89 45 ? 48 8B FA");
 }

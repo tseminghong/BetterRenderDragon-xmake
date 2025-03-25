@@ -13,7 +13,7 @@ Enhancement Mod for the RenderDragon Engine of _**Minecraft: Bedrock Edition**_
 
 ## Support Versions
 
-MCBE Official version 1.20.50+
+MCBE Official version 1.20.50-1.21.70 (Release)
 
 ## Installation
 

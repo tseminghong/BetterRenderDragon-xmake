@@ -14,11 +14,11 @@
 
 ## 支持的版本
 
-MCBE 正式版或预览版 1.20.50 以上
+MCBE 正式版或预览版 1.21.50-1.21.70 以上
 
 ## 使用
 
-1. 安装 MCBE 1.20.10 及以上版本
+1. 安装 MCBE 1.21.50 及以上版本
 2. 从[Releases](https://github.com/dreamguxiang/BetterRenderDragon/releases/latest)中下载`BetterRenderDragon.zip`并解压
 3. 双击`LaunchMinecraft.bat`启动正式版 MC, 或双击`LaunchMinecraftPreview.bat`启动预览版 MC
 
